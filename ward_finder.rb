@@ -22,46 +22,57 @@ def address_geocode(query)
   return result['results'][0]['geometry']['location']
 end
 
-#query = '644 W Arlington Place, Chicago, Il 60614'
-#query = '910 N Hermitage, Chicago, Il'
-#query = '14200 Trenton Ave, Orland Park, IL 60642'
-#query = '1826 West Wilson Avenue, Chicago, IL 60640'
-#query = '4015 N Sheridan Rd,Chicago, IL'
-query = '10714 South Sawyer Avenue,Chicago, IL 60655'
-location = address_geocode(query) 
+def processQuery(query,chicago,wards,hoods)
+  
+  location = address_geocode(query) 
 
-puts 'processing boundary'
+  point = BorderPatrol::Point.new(location['lng'],location['lat'])
+
+  if chicago.contains_point?(point)
+    puts query + " is in Chicago."
+
+    wards.each do |ward|
+      if ward.region.contains_point?(point)
+        puts "    Ward #{ward.name}"
+        break
+      end 
+    end
+  
+    hoods.each do |hood|
+      if hood.region.contains_point?(point)
+        puts "    Neighborhood is #{hood.name}"
+        break
+      end
+    end
+  
+  else
+    puts query + " is not in Chicago"
+  end
+  puts ''
+end
+
+query = ['3278 E 133RD St, Chicago, IL 60633',
+  '644 W Arlington Place, Chicago, Il 60614',
+  '910 N Hermitage, Chicago, Il',
+  '14200 Trenton Ave, Orland Park, IL 60642',
+  '1826 West Wilson Avenue, Chicago, IL 60640',
+  '4015 N Sheridan Rd,Chicago, IL',
+  '10714 South Sawyer Avenue,Chicago, IL 60655',
+  '1400 South Michigan, Chicago, IL 60605']
+
+puts 'processing chicago boundary'
 boundary_file = File.read('./ChicagoBoundary.kml')
-#boundary_file = open('http://cache.methodsix.com/kml/cityboundary.kml')
 chicago = BorderPatrol.parse_kml(boundary_file)
 
 puts 'processing wards'
+wards_file = File.read('./chicagowards.kml')
+wards = MapHacks.parse_wards(wards_file)
 
-placemarks_file = File.read('./chicagowards.kml')
-placemarks = MapHacks.parse_wards(placemarks_file)
-
+puts 'processing neighborhoods'
 hoods_file = File.read('./ChicagoHoods.kml')
 hoods = MapHacks.parse_hoods(hoods_file)
+puts ''
 
-point = BorderPatrol::Point.new(location['lng'],location['lat'])
-
-if chicago.contains_point?(point)
-  puts "Location is in Chicago."
-  
-  placemarks.each do |ward|
-    if ward.region.contains_point?(point)
-      puts "The address is in Ward #{ward.name}"
-      break
-    end 
-  end
-  
-  hoods.each do |hood|
-    if hood.region.contains_point?(point)
-      puts "The neighborhood is #{hood.name}"
-      break
-    end
-  end
-  
-else
-  puts "Location is not in Chicago"
+query.each do |q|
+  processQuery(q,chicago,wards,hoods)
 end
